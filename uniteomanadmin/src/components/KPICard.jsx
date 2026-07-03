@@ -9,7 +9,6 @@ const KPICard = ({
   color, 
   progress, 
   progressLabel, 
-  subtitle: extraSubtitle,
   valueColor,
   valueSuffix,
   liveBadge
@@ -62,7 +61,7 @@ const KPICard = ({
     <div className="bg-white rounded-2xl p-5 shadow-[0_1px_8px_rgba(0,0,0,0.05)] relative overflow-hidden">
       <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${gradient}`} />
       
-      <div className="flex items-start justify-between mb-[14px]">
+      <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 bg-gradient-to-br ${colors.bg} rounded-xl flex items-center justify-center ${colors.text}`}>
           {iconMap[icon]}
         </div>
@@ -79,10 +78,12 @@ const KPICard = ({
         )}
       </div>
       
-      <div className={`font-extrabold text-[32px] leading-none text-[#0A0A0F] mb-1`}>
-        {value}
+      <div className="mb-1">
+        <span className="font-extrabold text-[28px] leading-none text-[#0A0A0F]">
+          {value}
+        </span>
         {subtitle && (
-          <span className="font-normal text-[16px] text-[#9090A0]">{subtitle}</span>
+          <span className="font-normal text-[16px] text-[#9090A0] ml-1">{subtitle}</span>
         )}
         {valueSuffix && (
           <span className={valueColor || colors.text}>{valueSuffix}</span>
@@ -96,7 +97,7 @@ const KPICard = ({
       </div>
       
       <div className="flex justify-between mt-1">
-        <span className="font-normal text-[10px] leading-none text-[#B0B0C0]">{extraSubtitle}</span>
+        <span className="font-normal text-[10px] leading-none text-[#B0B0C0]">{subtitle}</span>
         <span className={`font-semibold text-[10px] leading-none ${colors.text}`}>{progressLabel}</span>
       </div>
     </div>
