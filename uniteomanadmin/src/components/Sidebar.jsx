@@ -1,27 +1,27 @@
 import React from 'react';
 import logo from '../assets/uniteoman-logo.png';
 
-const Sidebar = () => {
-  const navItems = [
-    { icon: 'grid', label: 'Dashboard', active: true, badge: null },
-    { icon: 'calendar', label: 'Bookings', badge: '147' },
-    { icon: 'users', label: 'Professionals' },
-    { icon: 'user-group', label: 'Customers' },
-    { icon: 'layers', label: 'Services' },
-    { icon: 'credit-card', label: 'Payments' },
-    { icon: 'chart-bar', label: 'Analytics' },
-    { icon: 'cog', label: 'Service Config' },
-    { icon: 'document', label: 'Reports' },
-  ];
+const NAV_ITEMS = [
+  { key: 'dashboard', icon: 'grid', label: 'Dashboard' },
+  { key: 'bookings', icon: 'calendar', label: 'Bookings', badge: '147' },
+  { key: 'professionals', icon: 'users', label: 'Professionals' },
+  { key: 'customers', icon: 'user-group', label: 'Customers' },
+  { key: 'services', icon: 'layers', label: 'Services' },
+  { key: 'payments', icon: 'credit-card', label: 'Payments' },
+  { key: 'analytics', icon: 'chart-bar', label: 'Analytics' },
+  { key: 'service-config', icon: 'cog', label: 'Service Config' },
+  { key: 'reports', icon: 'document', label: 'Reports' },
+];
 
+const Sidebar = ({ activePage = 'dashboard', onNavigate = () => {}, onLogout = () => {} }) => {
   return (
     <div className="w-[232px] bg-[#0A0A0F] flex flex-col flex-shrink-0 overflow-y-auto">
       {/* Logo */}
       <div className="px-5 pt-5 pb-4">
-        <img 
-          src={logo} 
-          className="h-[30px] w-auto brightness-0 invert opacity-90" 
-          alt="UniteOman" 
+        <img
+          src={logo}
+          className="h-[30px] w-auto"
+          alt="UniteOman"
         />
         <div className="font-normal text-[10px] leading-none text-white/30 mt-[5px] tracking-[0.5px]">
           Admin Console
@@ -31,35 +31,45 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="px-2.5 flex flex-col gap-0.5 flex-1">
-        {navItems.map((item, index) => (
-          <div
-            key={index}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer relative
-              ${item.active 
-                ? 'bg-gradient-to-br from-primary/20 to-secondary/15 border-l-3 border-primary' 
-                : 'hover:bg-white/5'
-              }`}
-          >
-            <Icon name={item.icon} className={item.active ? 'text-primary' : 'text-white/40'} />
-            <span className={`font-medium text-[13px] leading-none ${
-              item.active ? 'text-white' : 'text-white/50'
-            }`}>
-              {item.label}
-            </span>
-            {item.badge && (
-              <div className="absolute right-3 bg-primary rounded-full px-[7px] py-0.5 font-bold text-[10px] leading-none text-white">
-                {item.badge}
-              </div>
-            )}
-          </div>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const active = activePage === item.key;
+          return (
+            <div
+              key={item.key}
+              onClick={() => onNavigate(item.key)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer relative transition-colors
+                ${active
+                  ? 'bg-gradient-to-br from-primary/20 to-secondary/15 border-l-3 border-primary'
+                  : 'hover:bg-white/5'
+                }`}
+            >
+              <Icon name={item.icon} className={active ? 'text-primary' : 'text-white/40'} />
+              <span className={`font-medium text-[13px] leading-none ${
+                active ? 'text-white' : 'text-white/50'
+              }`}>
+                {item.label}
+              </span>
+              {item.badge && (
+                <div className="absolute right-3 bg-primary rounded-full px-[7px] py-0.5 font-bold text-[10px] leading-none text-white">
+                  {item.badge}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         <div className="mt-2 h-px bg-white/6" />
-        
+
         {/* Settings */}
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer mt-1.5 hover:bg-white/5">
-          <Icon name="settings" className="text-white/30" />
-          <span className="font-medium text-[13px] leading-none text-white/30">Settings</span>
+        <div
+          onClick={() => onNavigate('settings')}
+          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer mt-1.5 transition-colors
+            ${activePage === 'settings' ? 'bg-gradient-to-br from-primary/20 to-secondary/15 border-l-3 border-primary' : 'hover:bg-white/5'}`}
+        >
+          <Icon name="settings" className={activePage === 'settings' ? 'text-primary' : 'text-white/30'} />
+          <span className={`font-medium text-[13px] leading-none ${activePage === 'settings' ? 'text-white' : 'text-white/30'}`}>
+            Settings
+          </span>
         </div>
       </nav>
 
@@ -72,7 +82,12 @@ const Sidebar = () => {
           <div className="font-semibold text-xs leading-none text-white truncate">Admin User</div>
           <div className="font-normal text-[10px] leading-none text-white/35 mt-[3px]">Super Admin</div>
         </div>
-        <svg className="w-3.5 h-3.5 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg
+          onClick={onLogout}
+          title="Log out"
+          className="w-3.5 h-3.5 text-white/30 cursor-pointer hover:text-primary transition-colors"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
         </svg>
       </div>
@@ -80,7 +95,7 @@ const Sidebar = () => {
   );
 };
 
-// Icon component (simplified)
+// Icon component
 const Icon = ({ name, className }) => {
   const icons = {
     grid: (
