@@ -11,18 +11,33 @@ import ServiceConfig from './components/pages/ServiceConfig';
 import Reports from './components/pages/Reports';
 import Settings from './components/pages/Settings';
 import Login from './components/Login';
-
+import VendorVerification from './components/pages/VendorVerifications';
+import BookingControl from './components/pages/BookingControl';
+import LiveMap from './components/pages/LiveMap';
+import CreditsPlans from './components/pages/CreditPlans';
+import Disputes from './components/pages/Disputes';
+import Promotions from './components/pages/Promotions';
+import Reviews from './components/pages/Reviews';
+import Pricing from './components/pages/Pricing';
 
 const PAGES = {
   dashboard: Dashboard,
   bookings: Bookings,
-  professionals: Professionals,
-  customers: Customers,
-  services: Services,
+  'vendor-verification': VendorVerification,
+  'booking-control': BookingControl,
+  'live-map': LiveMap,
+  // professionals: Professionals,
+  // customers: Customers,
+  // services: Services,
   payments: Payments,
+  'credits-plans': CreditsPlans,
   analytics: Analytics,
-  'service-config': ServiceConfig,
-  reports: Reports,
+  disputes: Disputes,
+  promotions: Promotions,
+  reviews: Reviews,
+  pricing: Pricing,
+  // 'service-config': ServiceConfig,
+  // reports: Reports,
   settings: Settings,
 };
 

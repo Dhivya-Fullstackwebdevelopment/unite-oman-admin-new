@@ -1,102 +1,93 @@
-import React, { useState } from 'react';
-import PageHeader from '../PageHeader';
+import React from 'react';
 
-const Toggle = ({ on, onClick }) => (
-  <div
-    onClick={onClick}
-    className={`w-9 h-5 rounded-full cursor-pointer relative transition-colors flex-shrink-0 ${on ? 'bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5]' : 'bg-[#E5E7EB]'}`}
-  >
-    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
-  </div>
-);
+const PLATFORM_CONFIG = [
+  { label: 'Platform Commission', value: '15%', highlight: true },
+  { label: 'VAT Rate (Oman)', value: '9%' },
+  { label: 'Payout Cycle', value: 'T+1' },
+  { label: 'Currency', value: 'OMR (3 decimals)' },
+  { label: 'Default Language', value: 'EN + AR' },
+  { label: 'Auto-routing (AI)', value: 'ON' },
+  { label: 'AI Moderation', value: 'ON' },
+  { label: 'Max jobs/vendor/day', value: '8' },
+];
 
-const Field = ({ label, value }) => (
-  <div>
-    <div className="font-medium text-[11px] leading-none text-[#9090A0] mb-2">{label}</div>
-    <input
-      defaultValue={value}
-      className="w-full bg-[#F8F8FA] border border-[#EBEBEF] rounded-xl px-3.5 py-2.5 font-medium text-sm text-[#0A0A0F] outline-none focus:border-primary transition-colors"
-    />
+const GATEWAYS = [
+  { name: 'Bank of Muscat', desc: 'OMR cards · Maisarah · Primary', status: 'Live ✓', live: true },
+  { name: 'Thawani Pay', desc: 'Oman local debit · OTTP', status: 'Live ✓', live: true },
+  { name: 'Stripe', desc: 'Intl · Apple Pay · Google Pay', status: 'Live ✓', live: true },
+  { name: 'OmanNet', desc: 'Debit · In progress', status: 'Setup', live: false },
+];
+
+const INTEGRATIONS = [
+  { name: 'Unifonic SMS', desc: 'OTP · Booking SMS · EN+AR', status: 'Live ✓', live: true },
+  { name: 'Firebase', desc: 'FCM Push · OTP Auth', status: 'Live ✓', live: true },
+  { name: 'Google Maps', desc: 'Tracking · Directions', status: 'Live ✓', live: true },
+  { name: 'MOCI API', desc: 'CR Verification', status: 'Connected', live: true },
+  { name: 'ROP API', desc: 'Civil ID Verify', status: 'Connected', live: true },
+  { name: 'WhatsApp Biz', desc: 'Order alerts', status: 'Setup', live: false },
+  { name: 'Claude AI', desc: 'NLP search · Moderation', status: 'Live ✓', live: true },
+];
+
+const StatusBadge = ({ status, live }) => (
+  <div className={`px-[9px] py-[3px] rounded text-[10px] font-bold ${live ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+    {status}
   </div>
 );
 
 const Settings = () => {
-  const [toggles, setToggles] = useState({
-    emailAlerts: true,
-    smsAlerts: false,
-    bookingAlerts: true,
-    weeklyDigest: true,
-    twoFactor: true,
-  });
-
-  const flip = (key) => setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
-
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col bg-[#F8F8FA]">
-      <PageHeader title="Settings" subtitle="Manage your admin account and preferences" actionLabel="Save Changes" />
+    <div className="flex-1 overflow-y-auto bg-[#F4F5F8] p-[24px]">
+      <div className="font-extrabold text-[22px] leading-none text-[#0A0A0F] mb-[18px]">Platform Settings</div>
 
-      <div className="p-6 flex flex-col gap-5">
-        <div className="grid grid-cols-[1fr_1fr] gap-5">
-          {/* Profile */}
-          <div className="bg-white rounded-2xl p-[22px] shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
-            <div className="font-bold text-base leading-none text-[#0A0A0F] mb-5">Admin Profile</div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center font-bold text-lg text-white">
-                A
-              </div>
-              <div>
-                <div className="font-semibold text-sm leading-none text-[#0A0A0F]">Admin User</div>
-                <div className="font-normal text-xs leading-none text-[#9090A0] mt-1.5">Super Admin</div>
-              </div>
-              <div className="ml-auto px-3 py-2 bg-[#F8F8FA] border border-[#EBEBEF] rounded-lg font-semibold text-[11px] leading-none text-[#6B7280] cursor-pointer hover:border-primary hover:text-primary transition-colors">
-                Change Photo
+      <div className="grid grid-cols-3 gap-[14px]">
+        {/* Platform config */}
+        <div className="bg-white rounded-[16px] p-[18px] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
+          <div className="text-[15px] font-bold text-[#0A0A0F] mb-[14px]">Platform Config</div>
+          {PLATFORM_CONFIG.map((c, i) => (
+            <div
+              key={c.label}
+              className={`flex items-center justify-between py-[9px] ${i < PLATFORM_CONFIG.length - 1 ? 'border-b border-[#F5F5F5]' : ''}`}
+            >
+              <span className="text-[12px] font-medium text-[#0A0A0F]">{c.label}</span>
+              <div
+                className={`px-[11px] py-[5px] rounded-[9px] text-[12px] font-bold ${
+                  c.highlight
+                    ? 'bg-[#F8F8FA] border-[1.5px] border-[#D61CA84D] text-[#D61CA8]'
+                    : 'bg-[#F8F8FA] border-[1.5px] border-[#EBEBEF] text-[#0A0A0F]'
+                }`}
+              >
+                {c.value}
               </div>
             </div>
-            <div className="flex flex-col gap-4">
-              <Field label="Full Name" value="Admin User" />
-              <Field label="Email Address" value="admin@uniteoman.com" />
-              <Field label="Phone Number" value="+968 9123 4567" />
-            </div>
-          </div>
-
-          {/* Security */}
-          <div className="bg-white rounded-2xl p-[22px] shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
-            <div className="font-bold text-base leading-none text-[#0A0A0F] mb-5">Security</div>
-            <div className="flex flex-col gap-4 mb-5">
-              <Field label="Current Password" value="••••••••••" />
-              <Field label="New Password" value="" />
-            </div>
-            <div className="flex items-center justify-between bg-[#F8F8FA] rounded-xl p-3.5">
-              <div>
-                <div className="font-medium text-xs leading-none text-[#0A0A0F]">Two-Factor Authentication</div>
-                <div className="font-normal text-[10px] leading-none text-[#9090A0] mt-1.5">Adds an extra layer of security to your account</div>
-              </div>
-              <Toggle on={toggles.twoFactor} onClick={() => flip('twoFactor')} />
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Notifications */}
-        <div className="bg-white rounded-2xl p-[22px] shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
-          <div className="font-bold text-base leading-none text-[#0A0A0F] mb-1">Notifications</div>
-          <div className="font-normal text-xs leading-none text-[#9090A0] mb-5">Choose how you want to be notified about platform activity</div>
-
-          <div className="flex flex-col gap-1">
-            {[
-              { key: 'emailAlerts', label: 'Email Alerts', desc: 'Get important updates sent to your inbox' },
-              { key: 'smsAlerts', label: 'SMS Alerts', desc: 'Receive text messages for urgent issues' },
-              { key: 'bookingAlerts', label: 'Live Booking Alerts', desc: 'Instant notification when a new booking comes in' },
-              { key: 'weeklyDigest', label: 'Weekly Digest', desc: 'A summary of performance every Monday' },
-            ].map((row, i) => (
-              <div key={row.key} className={`flex items-center justify-between px-3 py-3.5 rounded-xl ${i % 2 === 1 ? 'bg-[#FAFAFA]' : ''}`}>
-                <div>
-                  <div className="font-medium text-xs leading-none text-[#0A0A0F]">{row.label}</div>
-                  <div className="font-normal text-[10px] leading-none text-[#9090A0] mt-1.5">{row.desc}</div>
-                </div>
-                <Toggle on={toggles[row.key]} onClick={() => flip(row.key)} />
+        {/* Payment gateways */}
+        <div className="bg-white rounded-[16px] p-[18px] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
+          <div className="text-[15px] font-bold text-[#0A0A0F] mb-[14px]">Payment Gateways</div>
+          {GATEWAYS.map((g) => (
+            <div key={g.name} className="flex items-center gap-[10px] px-[12px] py-[11px] bg-[#F8F8FA] rounded-[11px] mb-[8px] last:mb-0">
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-[#0A0A0F]">{g.name}</div>
+                <div className="text-[11px] text-[#9090A0] mt-[2px]">{g.desc}</div>
               </div>
-            ))}
-          </div>
+              <StatusBadge status={g.status} live={g.live} />
+            </div>
+          ))}
+        </div>
+
+        {/* Integrations */}
+        <div className="bg-white rounded-[16px] p-[18px] shadow-[0_1px_5px_rgba(0,0,0,0.05)]">
+          <div className="text-[15px] font-bold text-[#0A0A0F] mb-[14px]">Integrations</div>
+          {INTEGRATIONS.map((it) => (
+            <div key={it.name} className="flex items-center justify-between px-[12px] py-[10px] bg-[#F8F8FA] rounded-[10px] mb-[7px] last:mb-0">
+              <div>
+                <div className="text-[12px] font-semibold text-[#0A0A0F]">{it.name}</div>
+                <div className="text-[11px] text-[#9090A0] mt-[1px]">{it.desc}</div>
+              </div>
+              <StatusBadge status={it.status} live={it.live} />
+            </div>
+          ))}
         </div>
       </div>
     </div>

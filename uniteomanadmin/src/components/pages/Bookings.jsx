@@ -1,36 +1,42 @@
 import React, { useState } from 'react';
-import PageHeader from '../PageHeader';
-import StatCard from '../StatCard';
 
 const ALL_BOOKINGS = [
-  { id: '#4521', service: 'AC Deep Clean', customer: 'Ahmed Al-Rashdi', pro: { initial: 'M', name: 'Mohammed A.' }, area: 'Qurum', amount: 'OMR 17', status: 'Completed', statusColor: 'emerald', time: '10:24 AM' },
-  { id: '#4520', service: 'Home Cleaning', customer: 'Khalid Al-Farsi', pro: { initial: 'S', name: 'Salim Al-Habsi' }, area: 'Al Khuwair', amount: 'OMR 37', status: 'In Progress', statusColor: 'amber', time: '10:02 AM' },
-  { id: '#4519', service: 'Beauty at Home', customer: 'Sara Al-Balushi', pro: { initial: 'F', name: 'Fatima Al-Z.' }, area: 'MSQ Hills', amount: 'OMR 45', status: 'En Route', statusColor: 'blue', time: '9:51 AM' },
-  { id: '#4518', service: 'Pest Control', customer: 'Omar Al-Jabri', pro: { initial: 'K', name: 'Khalid Al-H.' }, area: 'Ruwi', amount: 'OMR 22', status: 'Scheduled', statusColor: 'purple', time: '9:40 AM' },
-  { id: '#4517', service: 'Plumbing Fix', customer: 'Nasser Al-Rawahi', pro: { initial: 'A', name: 'Ali Al-Maamari' }, area: 'Bowsher', amount: 'OMR 15', status: 'Completed', statusColor: 'emerald', time: '9:15 AM' },
-  { id: '#4516', service: 'Electrical Repair', customer: 'Yousef Al-Kindi', pro: { initial: 'K', name: 'Khalid Al-Farsi' }, area: 'Seeb', amount: 'OMR 28', status: 'Completed', statusColor: 'emerald', time: '8:58 AM' },
-  { id: '#4515', service: 'Home Cleaning', customer: 'Laila Al-Amri', pro: { initial: 'S', name: 'Salim Al-Habsi' }, area: 'Azaiba', amount: 'OMR 33', status: 'Cancelled', statusColor: 'red', time: '8:40 AM' },
-  { id: '#4514', service: 'AC Deep Clean', customer: 'Faisal Al-Harthy', pro: { initial: 'M', name: 'Mohammed A.' }, area: 'Ghubra', amount: 'OMR 17', status: 'Completed', statusColor: 'emerald', time: '8:22 AM' },
+  { id: '#4601', service: 'AC Deep Cleaning', customer: 'Ahmed Al-Rashdi', pro: 'Mohammed A.', dateArea: 'Today 2pm · Qurum', price: 'OMR 17.985', payment: 'Paid', status: 'En Route' },
+  { id: '#4600', service: 'Home Deep Cleaning', customer: 'Fatima Al-Balushi', pro: 'Salim Al-H.', dateArea: 'Today 3pm · Al Khuwair', price: 'OMR 52.000', payment: 'Paid', status: 'In Progress' },
+  { id: '#4599', service: 'Beauty at Home', customer: 'Sara Al-Rawahi', pro: 'Unassigned', dateArea: 'Today 4pm · MSQ Hills', price: 'OMR 45.000', payment: 'Paid', status: 'Unassigned' },
+  { id: '#4598', service: 'Plumbing Repair', customer: 'Omar Al-Jabri', pro: 'Khalid Al-H.', dateArea: 'Today 11am · Bowsher', price: 'OMR 16.100', payment: 'Paid', status: 'Completed' },
+  { id: '#4597', service: 'Electrical Repair', customer: 'Yousef Al-Kindi', pro: 'Khalid Al-Farsi', dateArea: 'Today 9am · Seeb', price: 'OMR 28.000', payment: 'Paid', status: 'Completed' },
+  { id: '#4596', service: 'Home Cleaning', customer: 'Laila Al-Amri', pro: 'Salim Al-Habsi', dateArea: 'Yesterday · Azaiba', price: 'OMR 33.000', payment: 'Refunded', status: 'Cancelled' },
+  { id: '#4595', service: 'AC Deep Clean', customer: 'Faisal Al-Harthy', pro: 'Mohammed A.', dateArea: 'Yesterday · Ghubra', price: 'OMR 17.000', payment: 'Paid', status: 'Completed' },
+  { id: '#4594', service: 'Pest Control', customer: 'Nasser Al-Rawahi', pro: 'Ali Al-Maamari', dateArea: 'Today 1pm · Ruwi', price: 'OMR 22.500', payment: 'Pending', status: 'Scheduled' },
 ];
 
-const STATUS_TABS = ['All', 'Completed', 'In Progress', 'En Route', 'Scheduled', 'Cancelled'];
+const FILTER_TABS = [
+  { label: 'All', count: 147 },
+  { label: 'En Route', count: 23 },
+  { label: 'In Progress', count: 18 },
+  { label: 'Scheduled', count: 54 },
+  { label: 'Completed', count: 48 },
+  { label: 'Unassigned', count: 12 },
+  { label: 'Cancelled', count: 4 },
+];
 
 const statusStyles = {
-  emerald: 'bg-emerald-100 text-emerald-600',
-  amber: 'bg-amber-100 text-amber-600',
-  blue: 'bg-blue-100 text-blue-600',
-  purple: 'bg-purple-100 text-purple-600',
-  red: 'bg-red-100 text-red-600',
+  'En Route': 'bg-blue-100 text-blue-600',
+  'In Progress': 'bg-amber-100 text-amber-600',
+  'Completed': 'bg-emerald-100 text-emerald-600',
+  'Unassigned': 'bg-rose-100 text-rose-500',
+  'Scheduled': 'bg-purple-100 text-purple-600',
+  'Cancelled': 'bg-red-100 text-red-500',
 };
 
-const proGradients = [
-  'from-primary to-secondary',
-  'from-accent to-secondary',
-  'from-primary to-accent',
-  'from-secondary to-cyan-400',
-  'from-emerald-500 to-accent',
-  'from-amber-500 to-red-500',
-];
+const paymentStyles = {
+  Paid: 'bg-emerald-100 text-emerald-600',
+  Pending: 'bg-amber-100 text-amber-600',
+  Refunded: 'bg-slate-100 text-slate-500',
+};
+
+const gridCols = 'grid-cols-[100px_1.4fr_1fr_1fr_100px_100px_110px_90px_130px]';
 
 const Bookings = () => {
   const [activeTab, setActiveTab] = useState('All');
@@ -40,73 +46,112 @@ const Bookings = () => {
     : ALL_BOOKINGS.filter((b) => b.status === activeTab);
 
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col bg-[#F8F8FA]">
-      <PageHeader title="Bookings" subtitle="Sunday, 29 June 2025 · Muscat, Oman" actionLabel="+ New Booking" />
+    <div className="flex-1 overflow-y-auto bg-[#F4F5F8] p-[24px]">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-[18px]">
+        <div>
+          <div className="font-extrabold text-[22px] leading-none text-[#0A0A0F]">All Bookings</div>
+          <div className="text-[14px] leading-none text-[#9090A0] mt-[4px]">147 today · Full history + export</div>
+        </div>
+        <div className="flex gap-[8px]">
+          <input
+            className="bg-white border-[1.5px] border-[#EBEBEF] rounded-lg px-[14px] py-[9px] text-[13px] text-[#0A0A0F] outline-none w-[240px] placeholder:text-[#9090A0]"
+            placeholder="Search bookings..."
+          />
+          <button className="px-[14px] py-[9px] bg-white border-[1.5px] border-[#EBEBEF] rounded-lg text-[12px] font-medium text-[#6B7280]">
+            Status ▾
+          </button>
+          <button className="px-[14px] py-[9px] bg-white border-[1.5px] border-[#EBEBEF] rounded-lg text-[12px] font-medium text-[#6B7280]">
+            Area ▾
+          </button>
+          <button className="px-[14px] py-[9px] bg-white border-[1.5px] border-[#EBEBEF] rounded-lg text-[12px] font-medium text-[#6B7280]">
+            Service ▾
+          </button>
+          <button className="px-[18px] py-[9px] bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] rounded-lg text-[12px] font-bold text-white">
+            Export CSV
+          </button>
+        </div>
+      </div>
 
-      <div className="p-6 flex flex-col gap-5">
-        {/* Stat strip */}
-        <div className="grid grid-cols-4 gap-5">
-          <StatCard label="Total Bookings Today" value="147" change="↑ 12%" gradient="from-[#D61CA8] to-[#8B2EF5]" icon={<span className="text-primary">📅</span>} />
-          <StatCard label="Completed" value="98" change="↑ 6%" gradient="from-emerald-500 to-accent" icon={<span>✅</span>} />
-          <StatCard label="In Progress / En Route" value="31" gradient="from-accent to-secondary" icon={<span>🚗</span>} />
-          <StatCard label="Cancelled" value="4" change="↓ 2%" gradient="from-amber-500 to-red-500" icon={<span>⚠️</span>} />
+      {/* Filter pills */}
+      <div className="flex gap-[8px] mb-[18px] flex-wrap">
+        {FILTER_TABS.map((tab) => {
+          const isActive = activeTab === tab.label;
+          return (
+            <button
+              key={tab.label}
+              onClick={() => setActiveTab(tab.label)}
+              className={`px-4 py-[8px] rounded-full text-[12px] leading-none transition-colors ${
+                isActive
+                  ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
+                  : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Table card */}
+      <div className="bg-white rounded-[14px] shadow-[0_1px_4px_rgba(0,0,0,0.05)] overflow-hidden">
+        <div className={`grid ${gridCols} gap-2 px-[16px] py-[10px] bg-[#F8F8FA] border-b border-[#EBEBEF]`}>
+          {['ID', 'Service · Customer', 'Professional', 'Date · Area', 'Price', 'Payment', 'Status', '', 'Actions'].map((h, i) => (
+            <span key={i} className="text-[10px] font-semibold text-[#9090A0] uppercase tracking-[0.5px]">{h}</span>
+          ))}
         </div>
 
-        {/* Table card */}
-        <div className="bg-white rounded-2xl p-[22px] shadow-[0_1px_8px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between mb-[18px]">
-            <div className="font-bold text-base leading-none text-[#0A0A0F]">All Bookings</div>
-            <div className="flex gap-2 items-center">
-              {STATUS_TABS.map((tab) => (
-                <div
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 rounded-lg font-semibold text-[11px] leading-none cursor-pointer transition-colors ${
-                    activeTab === tab
-                      ? 'bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] text-white'
-                      : 'bg-[#F8F8FA] text-[#9090A0] hover:text-[#0A0A0F]'
-                  }`}
-                >
-                  {tab}
-                </div>
-              ))}
+        {filtered.map((b) => (
+          <div
+            key={b.id}
+            className={`grid ${gridCols} gap-2 px-[16px] py-[13px] border-b border-[#F8F8F8] items-center`}
+          >
+            <span className="text-[12px] font-medium text-[#9090A0] font-mono">{b.id}</span>
+            <div>
+              <div className="text-[14px] font-semibold text-[#0A0A0F] leading-tight">{b.service}</div>
+              <div className="text-[11px] text-[#9090A0] leading-tight mt-[2px]">{b.customer}</div>
+            </div>
+            <span className="text-[12px] font-medium text-[#0A0A0F]">{b.pro}</span>
+            <span className="text-[12px] text-[#6B7280]">{b.dateArea}</span>
+            <span className="text-[13px] font-bold text-[#0A0A0F]">{b.price}</span>
+            <div className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${paymentStyles[b.payment]}`}>
+              {b.payment}
+            </div>
+            <div className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${statusStyles[b.status]}`}>
+              {b.status}
+            </div>
+            <div></div>
+            <div className="flex gap-[5px]">
+              <button className="px-[10px] py-[5px] bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]">
+                View
+              </button>
+              {b.status === 'Unassigned' ? (
+                <button className="px-[10px] py-[5px] bg-[#D61CA8] rounded-[6px] text-[10px] font-bold text-white">
+                  Assign
+                </button>
+              ) : (
+                <button className="px-[10px] py-[5px] bg-[#D61CA814] rounded-[6px] text-[10px] font-semibold text-[#D61CA8]">
+                  Reassign
+                </button>
+              )}
             </div>
           </div>
+        ))}
 
-          <div className="grid grid-cols-[70px_1.2fr_1fr_90px_80px_80px_100px] gap-2 px-3 py-2 bg-[#F8F8FA] rounded-xl mb-2">
-            {['ID', 'Service · Customer', 'Professional', 'Area', 'Time', 'Amount', 'Status'].map((h) => (
-              <span key={h} className="font-semibold text-[10px] leading-none text-[#9090A0] uppercase tracking-[0.6px]">{h}</span>
-            ))}
-          </div>
+        {filtered.length === 0 && (
+          <div className="py-14 text-center text-base font-medium text-[#9090A0]">No bookings match this filter.</div>
+        )}
 
-          <div className="flex flex-col gap-1">
-            {filtered.map((booking, index) => (
-              <div
-                key={booking.id}
-                className={`grid grid-cols-[70px_1.2fr_1fr_90px_80px_80px_100px] gap-2 px-3 py-2.5 rounded-xl items-center ${index % 2 === 1 ? 'bg-[#FAFAFA]' : ''}`}
-              >
-                <span className="font-semibold text-xs leading-none text-[#9090A0]">{booking.id}</span>
-                <div>
-                  <div className="font-semibold text-xs leading-[1.2] text-[#0A0A0F]">{booking.service}</div>
-                  <div className="font-normal text-[10px] leading-none text-[#9090A0] mt-0.5">{booking.customer}</div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-[22px] h-[22px] rounded-full bg-gradient-to-br ${proGradients[index % proGradients.length]} flex items-center justify-center font-bold text-[9px] text-white flex-shrink-0`}>
-                    {booking.pro.initial}
-                  </div>
-                  <span className="font-medium text-[11px] leading-none text-[#0A0A0F]">{booking.pro.name}</span>
-                </div>
-                <span className="font-normal text-[11px] leading-none text-[#6B7280]">{booking.area}</span>
-                <span className="font-normal text-[11px] leading-none text-[#6B7280]">{booking.time}</span>
-                <span className="font-bold text-xs leading-none text-[#0A0A0F]">{booking.amount}</span>
-                <div className={`px-2.5 py-1 rounded-md font-bold text-[10px] leading-none text-center ${statusStyles[booking.statusColor]}`}>
-                  {booking.status}
-                </div>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <div className="py-10 text-center font-medium text-sm text-[#9090A0]">No bookings match this filter.</div>
-            )}
+        {/* Pagination footer */}
+        <div className="px-[16px] py-[14px] border-t border-[#F0F0F4] bg-white rounded-b-[14px] flex items-center justify-between">
+          <div className="text-[12px] text-[#9090A0]">Showing 1–20 of 147 bookings</div>
+          <div className="flex gap-[6px]">
+            <button className="px-[12px] py-[6px] bg-white border-[1.5px] border-[#EBEBEF] rounded-md text-[11px] font-medium text-[#9090A0]">← Prev</button>
+            <button className="px-[12px] py-[6px] bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] rounded-md text-[11px] font-bold text-white">1</button>
+            <button className="px-[12px] py-[6px] bg-white border-[1.5px] border-[#EBEBEF] rounded-md text-[11px] font-medium text-[#9090A0]">2</button>
+            <button className="px-[12px] py-[6px] bg-white border-[1.5px] border-[#EBEBEF] rounded-md text-[11px] font-medium text-[#9090A0]">3</button>
+            <button className="px-[12px] py-[6px] bg-white border-[1.5px] border-[#EBEBEF] rounded-md text-[11px] font-medium text-[#9090A0]">...</button>
+            <button className="px-[12px] py-[6px] bg-white border-[1.5px] border-[#EBEBEF] rounded-md text-[11px] font-medium text-[#9090A0]">Next →</button>
           </div>
         </div>
       </div>
