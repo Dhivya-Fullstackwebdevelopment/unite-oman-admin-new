@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, BrowserRouter as Router } from 'react-router-dom';
+import { Toaster, toast } from 'react-hot-toast'; // 👈 FIX: import Toaster and toast
+
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Bookings from './components/pages/Bookings';
@@ -43,12 +46,78 @@ const PAGES = {
 
 const SESSION_KEY = 'uniteoman_admin_session';
 
+// ScrollToTop component
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
+// Main App content component
+function AppContent({ setIsAuthenticated, setActivePage, activePage }) {
+  const ActivePageComponent = PAGES[activePage] || Dashboard;
+
+  const handleLogout = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setIsAuthenticated(false);
+    setActivePage('dashboard');
+    // 👇 Show logout toast
+    toast.error('Logged out successfully', {
+      style: {
+        border: '1px solid #ff4d4f',
+        padding: '16px',
+        color: '#ff4d4f',
+      },
+      icon: '👋',
+    });
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-[#F8F8FA]">
+      <Sidebar activePage={activePage} onNavigate={setActivePage} onLogout={handleLogout} />
+      <ActivePageComponent />
+      <ScrollToTop />
+      {/* Global Toaster with custom styling */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontSize: '14px',
+            borderRadius: '10px',
+            background: '#ffffff',
+            color: '#1e293b',
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+          },
+          success: {
+            duration: 4000,
+            style: {
+              background: '#ecfdf5',
+              border: '1px solid #10b981',
+              color: '#065f46',
+            },
+          },
+          error: {
+            duration: 5000,
+            style: {
+              background: '#fef2f2',
+              border: '1px solid #ef4444',
+              color: '#991b1b',
+            },
+          },
+        }}
+      />
+    </div>
+  );
+}
+
 function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // Restore a "keep me signed in" session on load.
   useEffect(() => {
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) setIsAuthenticated(true);
@@ -60,27 +129,32 @@ function App() {
       localStorage.setItem(SESSION_KEY, email);
     }
     setIsAuthenticated(true);
+    // 👇 Show login success toast
+    toast.success(`Welcome back, ${email || 'Admin'}!`, {
+      duration: 4000,
+      style: {
+        background: '#d1fae5',
+        color: '#065f46',
+        fontWeight: '500',
+      },
+      icon: '✅',
+    });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(SESSION_KEY);
-    setIsAuthenticated(false);
-    setActivePage('dashboard');
-  };
-
-  if (checkingSession) return null; // avoids a login-page flash while checking storage
+  if (checkingSession) return null;
 
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
   }
 
-  const ActivePageComponent = PAGES[activePage] || Dashboard;
-
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8F8FA]">
-      <Sidebar activePage={activePage} onNavigate={setActivePage} onLogout={handleLogout} />
-      <ActivePageComponent />
-    </div>
+    <Router>
+      <AppContent
+        setIsAuthenticated={setIsAuthenticated}
+        setActivePage={setActivePage}
+        activePage={activePage}
+      />
+    </Router>
   );
 }
 

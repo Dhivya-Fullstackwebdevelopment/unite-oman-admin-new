@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import logo from '../assets/uniteoman-logo.png';
-
-// Demo credentials — swap this block out for a real API call when you wire up a backend.
-const DEMO_EMAIL = 'admin@uniteoman.com';
-const DEMO_PASSWORD = 'admin123';
+import axios from "axios";
+import { API_ENDPOINTS } from "../api/apiConfig";
+import toast from 'react-hot-toast';
 
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -13,25 +12,141 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!email || !password) {
-      setError('Please enter both email and password.');
+      setError("Please enter both email and password.");
+      toast.error("Please enter both email and password.");
       return;
     }
 
-    setLoading(true);
-    // Simulate an auth request — replace with a real API call.
-    setTimeout(() => {
-      setLoading(false);
-      if (email.trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD) {
-        onLogin({ email, remember });
+    try {
+      setLoading(true);
+
+      console.log("Attempting login to:", API_ENDPOINTS.ADMIN_LOGIN);
+
+      const response = await axios.post(
+        API_ENDPOINTS.ADMIN_LOGIN,
+        {
+          email: email.trim(),
+          password,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log("Login response:", response.data);
+
+      const data = response.data;
+
+      // Check for successful login
+      if (data.status === "success" || data.access || data.token) {
+        // Store tokens
+        if (data.access) {
+          localStorage.setItem("admin_access_token", data.access);
+          localStorage.setItem("admin_refresh_token", data.refresh || data.refresh_token);
+        } else if (data.token) {
+          localStorage.setItem("admin_access_token", data.token);
+        }
+
+        // Store user
+        if (data.user) {
+          localStorage.setItem("admin_user", JSON.stringify(data.user));
+        }
+
+        // Show success toast - FIXED: Properly accessing the message
+        const successMessage = data.message || data.detail || "Login successful!";
+        toast.success(successMessage, {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontSize: '14px',
+            padding: '16px',
+            borderRadius: '12px',
+          },
+          icon: '✅',
+        });
+
+        // Call onLogin with user data
+        onLogin(data.user || data);
+        
+        // Optional: You can also show a welcome toast after login
+        setTimeout(() => {
+          toast.success(`Welcome back, ${data.user?.name || 'Admin'}!`, {
+            duration: 2000,
+            position: 'top-right',
+          });
+        }, 500);
+
       } else {
-        setError('Incorrect email or password. Please try again.');
+        // Login failed
+        const errorMessage = data.message || data.detail || "Login failed. Please try again.";
+        setError(errorMessage);
+        toast.error(errorMessage, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
-    }, 500);
+    } catch (error) {
+      console.error("Login error:", error);
+      console.error("Error response:", error.response);
+
+      let errorMessage = "An unexpected error occurred.";
+
+      if (error.response) {
+        // Server responded with error
+        const responseData = error.response.data;
+        errorMessage = 
+          responseData?.message ||
+          responseData?.detail ||
+          responseData?.error ||
+          responseData?.non_field_errors?.[0] ||
+          error.response.statusText ||
+          "Invalid email or password.";
+        
+        // Handle specific status codes
+        if (error.response.status === 401) {
+          errorMessage = "Invalid email or password. Please try again.";
+        } else if (error.response.status === 403) {
+          errorMessage = "Access denied. You don't have admin privileges.";
+        } else if (error.response.status === 404) {
+          errorMessage = "Login endpoint not found. Please check the API URL.";
+        } else if (error.response.status === 500) {
+          errorMessage = "Server error. Please try again later.";
+        }
+      } else if (error.request) {
+        errorMessage = "No response from server. Please check if the backend is running.";
+      } else {
+        errorMessage = error.message || "An unexpected error occurred.";
+      }
+
+      setError(errorMessage);
+      
+      // Show error toast
+      toast.error(errorMessage, {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+          fontFamily: 'Plus Jakarta Sans, sans-serif',
+          fontSize: '14px',
+          padding: '16px',
+          borderRadius: '12px',
+        },
+        icon: '❌',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -139,12 +254,22 @@ const Login = ({ onLogin }) => {
             disabled={loading}
             className="mt-1 px-5 py-3 bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] rounded-xl font-semibold text-sm leading-none text-white cursor-pointer shadow-[0_4px_16px_rgba(214,28,168,0.35)] hover:shadow-[0_6px_24px_rgba(214,28,168,0.45)] transition-shadow disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in…' : 'Sign In'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing in…
+              </span>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 
         <div className="mt-6 text-center font-normal text-[11px] leading-none text-[#B0B0C0]">
-          Demo credentials: admin@uniteoman.com / admin123
+          Admin Login
         </div>
       </div>
     </div>
