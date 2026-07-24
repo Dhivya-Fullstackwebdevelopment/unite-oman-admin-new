@@ -191,6 +191,7 @@ const Bookings = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
+
   const openBookingDetail = (id) => {
     setSelectedBookingId(id);
     setBookingDetail(null);
@@ -298,7 +299,7 @@ const Bookings = () => {
 
           <button
             onClick={handleExport}
-            className="px-[18px] py-[9px] bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] rounded-lg text-[12px] font-bold text-white"
+            className="px-[18px] py-[9px] bg-gradient-to-r cursor-pointer from-[#D61CA8] to-[#8B2EF5] rounded-lg text-[12px] font-bold text-white"
           >
             Export CSV
           </button>
@@ -313,9 +314,9 @@ const Bookings = () => {
             <button
               key={tab.label}
               onClick={() => handleStatusChange(tab.value)}
-              className={`px-4 py-[8px] rounded-full text-[12px] leading-none transition-colors ${isActive
-                  ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
-                  : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
+              className={`px-4 py-[8px]  cursor-pointer rounded-full text-[12px] leading-none transition-colors ${isActive
+                ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
+                : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
                 }`}
             >
               {tab.label}
@@ -377,19 +378,30 @@ const Bookings = () => {
               <div className="flex gap-[5px]">
                 <button
                   onClick={() => openBookingDetail(b.id)}
-                  className="px-[10px] py-[5px] bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]"
+                  className="px-[10px] py-[5px] cursor-pointer bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]"
                 >
                   View
                 </button>
-                {b.status === 'UNASSIGNED' || !b.professional_name ? (
-                  <button className="px-[10px] py-[5px] bg-[#D61CA8] rounded-[6px] text-[10px] font-bold text-white">
-                    Assign
-                  </button>
-                ) : (
-                  <button className="px-[10px] py-[5px] bg-[#D61CA814] rounded-[6px] text-[10px] font-semibold text-[#D61CA8]">
-                    Reassign
-                  </button>
-                )}
+
+                {
+                  (b.status === "UNASSIGNED" ||
+                    !b.professional_name ||
+                    b.professional_name === "Unassigned") ? (
+                    <button className="px-[10px] py-[5px] cursor-pointer bg-[#D61CA8] rounded-[6px] text-[10px] font-bold text-white">
+                      Assign
+                    </button>
+                  ) : (
+                    <button
+                      disabled={!["SCHEDULED", "PENDING", "CONFIRMED"].includes(b.status)}
+                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition
+        ${["SCHEDULED", "PENDING", "CONFIRMED"].includes(b.status)
+                          ? "bg-[#D61CA814] text-[#D61CA8] cursor-pointer"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                        }`}
+                    >
+                      Reassign
+                    </button>
+                  )}
               </div>
             </div>
           ))}
