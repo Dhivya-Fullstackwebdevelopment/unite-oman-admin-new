@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
-const TOKEN = localStorage.getItem("admin_access_token")
+const TOKEN = localStorage.getItem("admin_access_token");
 
 const STATUS_TABS = [
   { label: 'All', value: '' },
@@ -46,7 +46,6 @@ function formatStatusLabel(status) {
     .join(' ');
 }
 
-// Builds a numbered page sequence with ellipsis, e.g. 1 ... 4 [5] 6 ... 12
 function getPageNumbers(current, total) {
   if (total <= 1) return [1];
   const pages = new Set([1, total, current, current - 1, current + 1]);
@@ -68,6 +67,22 @@ async function apiGet(path) {
   });
   if (!res.ok) {
     throw new Error(`Request failed (${res.status})`);
+  }
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `Request failed (${res.status})`);
   }
   return res.json();
 }
@@ -94,14 +109,32 @@ const Bookings = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  // ── Assignment modal state ────────────────────────────────
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignBookingId, setAssignBookingId] = useState(null);
+  const [assignProfessionalId, setAssignProfessionalId] = useState('');
+  const [professionalsList, setProfessionalsList] = useState([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState(null);
+  const [isReassign, setIsReassign] = useState(false); // <-- NEW: track assign vs reassign
+
+  // ── Detail modal state ────────────────────────────────────
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [bookingDetail, setBookingDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+
   // Load filter reference data once
   useEffect(() => {
     apiGet('/locations/')
       .then((res) => setLocations(res.data || []))
-      .catch(() => { });
+      .catch(() => {});
     apiGet('/services/')
       .then((res) => setServices(res.data || []))
-      .catch(() => { });
+      .catch(() => {});
+    apiGet('/professionals/admin/professionals/')
+      .then((res) => setProfessionalsList(res.data || []))
+      .catch(() => {});
   }, []);
 
   // Whenever the main location changes, load its sub-areas
@@ -183,15 +216,49 @@ const Bookings = () => {
         link.download = 'bookings.csv';
         link.click();
       })
-      .catch(() => { });
+      .catch(() => {});
   };
 
-  const [selectedBookingId, setSelectedBookingId] = useState(null);
-  const [bookingDetail, setBookingDetail] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(null);
+  // ── Assignment handlers ────────────────────────────────────
+  const openAssignModal = (bookingId, reassign = false) => {
+    setAssignBookingId(bookingId);
+    setAssignProfessionalId('');
+    setAssignError(null);
+    setIsReassign(reassign);
+    setShowAssignModal(true);
+  };
 
+  const closeAssignModal = () => {
+    setShowAssignModal(false);
+    setAssignBookingId(null);
+    setAssignProfessionalId('');
+    setAssignError(null);
+    setAssignLoading(false);
+    setIsReassign(false);
+  };
 
+  const handleAssignSubmit = async () => {
+    if (!assignBookingId || !assignProfessionalId) {
+      setAssignError('Please select a professional.');
+      return;
+    }
+    setAssignLoading(true);
+    setAssignError(null);
+    try {
+      await apiPost('/professionals/admin/bookings/assign/', {
+        booking_id: assignBookingId,
+        professional_id: parseInt(assignProfessionalId, 10),
+      });
+      await loadBookings();
+      closeAssignModal();
+    } catch (err) {
+      setAssignError(err.message || 'Assignment failed. Please try again.');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  // ── Detail modal handlers ────────────────────────────────
   const openBookingDetail = (id) => {
     setSelectedBookingId(id);
     setBookingDetail(null);
@@ -210,14 +277,13 @@ const Bookings = () => {
   };
 
   useEffect(() => {
-    if (selectedBookingId) {
-      const prevOverflow = document.body.style.overflow;
+    if (selectedBookingId || showAssignModal) {
       document.body.style.overflow = 'hidden';
       return () => {
-        document.body.style.overflow = prevOverflow;
+        document.body.style.overflow = '';
       };
     }
-  }, [selectedBookingId]);
+  }, [selectedBookingId, showAssignModal]);
 
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, totalCount);
@@ -255,7 +321,6 @@ const Bookings = () => {
             />
           </form>
 
-          {/* Main location -> drives sub-area options */}
           <select
             value={locationId}
             onChange={(e) => handleLocationChange(e.target.value)}
@@ -269,7 +334,6 @@ const Bookings = () => {
             ))}
           </select>
 
-          {/* Sub-area, populated from /professionals/areas/?location_id= */}
           <select
             value={area}
             onChange={(e) => handleAreaChange(e.target.value)}
@@ -314,10 +378,11 @@ const Bookings = () => {
             <button
               key={tab.label}
               onClick={() => handleStatusChange(tab.value)}
-              className={`px-4 py-[8px]  cursor-pointer rounded-full text-[12px] leading-none transition-colors ${isActive
-                ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
-                : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
-                }`}
+              className={`px-4 py-[8px] cursor-pointer rounded-full text-[12px] leading-none transition-colors ${
+                isActive
+                  ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
+                  : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
+              }`}
             >
               {tab.label}
             </button>
@@ -347,64 +412,71 @@ const Bookings = () => {
 
         {!loading &&
           !error &&
-          bookings.map((b) => (
-            <div
-              key={b.id}
-              className={`grid ${gridCols} gap-2 px-[16px] py-[13px] border-b border-[#F8F8F8] items-center`}
-            >
-              <span className="text-[12px] font-medium text-[#9090A0] font-mono">{b.booking_code}</span>
-              <div>
-                <div className="text-[14px] font-semibold text-[#0A0A0F] leading-tight">{b.service_name}</div>
-                <div className="text-[11px] text-[#9090A0] leading-tight mt-[2px]">{b.customer_name}</div>
-              </div>
-              <span className="text-[12px] font-medium text-[#0A0A0F]">{b.professional_name || 'Unassigned'}</span>
-              <span className="text-[12px] text-[#6B7280]">
-                {b.date} · {b.area}
-              </span>
-              <span className="text-[13px] font-bold text-[#0A0A0F]">{b.price}</span>
+          bookings.map((b) => {
+            const isUnassigned = b.status === 'UNASSIGNED' || !b.professional_name || b.professional_name === 'Unassigned';
+            const canReassign = ['SCHEDULED', 'PENDING', 'CONFIRMED'].includes(b.status);
+            return (
               <div
-                className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
-                  }`}
+                key={b.id}
+                className={`grid ${gridCols} gap-2 px-[16px] py-[13px] border-b border-[#F8F8F8] items-center`}
               >
-                {b.payment_status}
-              </div>
-              <div
-                className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${statusStyles[b.status] || 'bg-slate-100 text-slate-500'
+                <span className="text-[12px] font-medium text-[#9090A0] font-mono">{b.booking_code}</span>
+                <div>
+                  <div className="text-[14px] font-semibold text-[#0A0A0F] leading-tight">{b.service_name}</div>
+                  <div className="text-[11px] text-[#9090A0] leading-tight mt-[2px]">{b.customer_name}</div>
+                </div>
+                <span className="text-[12px] font-medium text-[#0A0A0F]">{b.professional_name || 'Unassigned'}</span>
+                <span className="text-[12px] text-[#6B7280]">
+                  {b.date} · {b.area}
+                </span>
+                <span className="text-[13px] font-bold text-[#0A0A0F]">{b.price}</span>
+                <div
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
+                    paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
                   }`}
-              >
-                {formatStatusLabel(b.status)}
-              </div>
-              <span className="text-[12px] text-[#6B7280]">{b.time}</span>
-              <div className="flex gap-[5px]">
-                <button
-                  onClick={() => openBookingDetail(b.id)}
-                  className="px-[10px] py-[5px] cursor-pointer bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]"
                 >
-                  View
-                </button>
+                  {b.payment_status}
+                </div>
+                <div
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
+                    statusStyles[b.status] || 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {formatStatusLabel(b.status)}
+                </div>
+                <span className="text-[12px] text-[#6B7280]">{b.time}</span>
+                <div className="flex gap-[5px]">
+                  <button
+                    onClick={() => openBookingDetail(b.id)}
+                    className="px-[10px] py-[5px] cursor-pointer bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]"
+                  >
+                    View
+                  </button>
 
-                {
-                  (b.status === "UNASSIGNED" ||
-                    !b.professional_name ||
-                    b.professional_name === "Unassigned") ? (
-                    <button className="px-[10px] py-[5px] cursor-pointer bg-[#D61CA8] rounded-[6px] text-[10px] font-bold text-white">
+                  {isUnassigned ? (
+                    <button
+                      onClick={() => openAssignModal(b.id, false)} // Assign
+                      className="px-[10px] py-[5px] cursor-pointer bg-[#D61CA8] rounded-[6px] text-[10px] font-bold text-white"
+                    >
                       Assign
                     </button>
                   ) : (
                     <button
-                      disabled={!["SCHEDULED", "PENDING", "CONFIRMED"].includes(b.status)}
-                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition
-        ${["SCHEDULED", "PENDING", "CONFIRMED"].includes(b.status)
-                          ? "bg-[#D61CA814] text-[#D61CA8] cursor-pointer"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
-                        }`}
+                      onClick={canReassign ? () => openAssignModal(b.id, true) : undefined} // Reassign
+                      disabled={!canReassign}
+                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition ${
+                        canReassign
+                          ? 'bg-[#D61CA814] text-[#D61CA8] cursor-pointer'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                      }`}
                     >
                       Reassign
                     </button>
                   )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
         {!loading && !error && bookings.length === 0 && (
           <div className="py-14 text-center text-base font-medium text-[#9090A0]">No bookings match this filter.</div>
@@ -457,7 +529,75 @@ const Bookings = () => {
         </div>
       </div>
 
-      {/* Booking detail modal */}
+      {/* ─── ASSIGN MODAL ────────────────────────────────────── */}
+      {showAssignModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+          onClick={closeAssignModal}
+        >
+          <div
+            className="bg-white rounded-[20px] w-full max-w-[420px] shadow-2xl p-[24px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-[18px]">
+              <h3 className="text-[17px] font-extrabold text-[#0A0A0F]">
+                {isReassign ? 'Reassign Professional' : 'Assign Professional'}
+              </h3>
+              <button
+                onClick={closeAssignModal}
+                className="w-[28px] h-[28px] flex items-center justify-center rounded-full bg-[#F4F5F8] hover:bg-[#EBEBEF] text-[#0A0A0F] text-[16px] font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-[16px]">
+              <label className="block text-[12px] font-semibold text-[#9090A0] uppercase tracking-[0.5px] mb-[6px]">
+                Select Professional
+              </label>
+              <select
+                value={assignProfessionalId}
+                onChange={(e) => setAssignProfessionalId(e.target.value)}
+                className="w-full px-[14px] py-[10px] border-[1.5px] border-[#EBEBEF] rounded-[10px] text-[13px] text-[#0A0A0F] outline-none focus:ring-2 focus:ring-[#D61CA8]"
+              >
+                <option value="">Choose a professional…</option>
+                {professionalsList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.specialty ? `(${p.specialty})` : ''}
+                  </option>
+                ))}
+              </select>
+              {assignError && (
+                <div className="mt-[8px] text-[12px] font-medium text-red-500">{assignError}</div>
+              )}
+            </div>
+
+            <div className="flex gap-[10px] justify-end">
+              <button
+                onClick={closeAssignModal}
+                className="px-[18px] py-[10px] border border-[#EBEBEF] rounded-[10px] text-[13px] font-semibold text-[#6B7280] hover:bg-[#F8F8FA]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignSubmit}
+                disabled={assignLoading}
+                className="px-[18px] py-[10px] bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] rounded-[10px] text-[13px] font-bold text-white disabled:opacity-60"
+              >
+                {assignLoading
+                  ? isReassign
+                    ? 'Reassigning…'
+                    : 'Assigning…'
+                  : isReassign
+                  ? 'Reassign'
+                  : 'Assign'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── DETAIL MODAL (unchanged) ────────────────────────── */}
       {selectedBookingId && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
@@ -486,7 +626,8 @@ const Bookings = () => {
 
                   <button
                     onClick={closeBookingDetail}
-                    className="absolute top-[16px] right-[16px] z-50 w-[28px] h-[28px] flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold"                  >
+                    className="absolute top-[16px] right-[16px] z-50 w-[28px] h-[28px] flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold"
+                  >
                     ✕
                   </button>
 
