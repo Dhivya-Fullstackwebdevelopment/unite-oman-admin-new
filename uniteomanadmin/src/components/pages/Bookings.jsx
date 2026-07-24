@@ -98,10 +98,10 @@ const Bookings = () => {
   useEffect(() => {
     apiGet('/locations/')
       .then((res) => setLocations(res.data || []))
-      .catch(() => {});
+      .catch(() => { });
     apiGet('/services/')
       .then((res) => setServices(res.data || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Whenever the main location changes, load its sub-areas
@@ -183,7 +183,7 @@ const Bookings = () => {
         link.download = 'bookings.csv';
         link.click();
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -313,11 +313,10 @@ const Bookings = () => {
             <button
               key={tab.label}
               onClick={() => handleStatusChange(tab.value)}
-              className={`px-4 py-[8px] rounded-full text-[12px] leading-none transition-colors ${
-                isActive
+              className={`px-4 py-[8px] rounded-full text-[12px] leading-none transition-colors ${isActive
                   ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
                   : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -363,16 +362,14 @@ const Bookings = () => {
               </span>
               <span className="text-[13px] font-bold text-[#0A0A0F]">{b.price}</span>
               <div
-                className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
-                  paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
-                }`}
+                className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
+                  }`}
               >
                 {b.payment_status}
               </div>
               <div
-                className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
-                  statusStyles[b.status] || 'bg-slate-100 text-slate-500'
-                }`}
+                className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${statusStyles[b.status] || 'bg-slate-100 text-slate-500'
+                  }`}
               >
                 {formatStatusLabel(b.status)}
               </div>
@@ -475,12 +472,11 @@ const Bookings = () => {
                   <div className="absolute -top-8 -right-8 w-[140px] h-[140px] rounded-full bg-white/10" />
                   <div className="absolute -bottom-10 -left-6 w-[100px] h-[100px] rounded-full bg-white/10" />
 
-                  {/* <button
+                  <button
                     onClick={closeBookingDetail}
-                    className="absolute top-[16px] right-[16px] w-[28px] h-[28px] flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold transition-colors"
-                  >
+                    className="absolute top-[16px] right-[16px] z-50 w-[28px] h-[28px] flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold"                  >
                     ✕
-                  </button> */}
+                  </button>
 
                   <div className="relative flex items-center justify-between pr-[36px]">
                     <div>
