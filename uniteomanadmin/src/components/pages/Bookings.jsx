@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 const TOKEN = localStorage.getItem("admin_access_token");
@@ -113,10 +114,11 @@ const Bookings = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignBookingId, setAssignBookingId] = useState(null);
   const [assignProfessionalId, setAssignProfessionalId] = useState('');
-  const [professionalsList, setProfessionalsList] = useState([]);
+  const [availableProfessionals, setAvailableProfessionals] = useState([]); // <-- list from API
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState(null);
-  const [isReassign, setIsReassign] = useState(false); // <-- NEW: track assign vs reassign
+  const [isReassign, setIsReassign] = useState(false);
+  const [loadingProfessionals, setLoadingProfessionals] = useState(false);
 
   // ── Detail modal state ────────────────────────────────────
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -128,13 +130,11 @@ const Bookings = () => {
   useEffect(() => {
     apiGet('/locations/')
       .then((res) => setLocations(res.data || []))
-      .catch(() => {});
+      .catch(() => { });
     apiGet('/services/')
       .then((res) => setServices(res.data || []))
-      .catch(() => {});
-    apiGet('/professionals/admin/professionals/')
-      .then((res) => setProfessionalsList(res.data || []))
-      .catch(() => {});
+      .catch(() => { });
+    // We no longer fetch global professionals – we'll fetch per booking
   }, []);
 
   // Whenever the main location changes, load its sub-areas
@@ -216,16 +216,28 @@ const Bookings = () => {
         link.download = 'bookings.csv';
         link.click();
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   // ── Assignment handlers ────────────────────────────────────
-  const openAssignModal = (bookingId, reassign = false) => {
+  const openAssignModal = async (bookingId, reassign = false) => {
     setAssignBookingId(bookingId);
     setAssignProfessionalId('');
     setAssignError(null);
     setIsReassign(reassign);
+    setAvailableProfessionals([]);
+    setLoadingProfessionals(true);
     setShowAssignModal(true);
+
+    try {
+      const res = await apiGet(`/professionals/bookings/${bookingId}/available-professionals/`);
+      setAvailableProfessionals(res.data || []);
+    } catch (err) {
+      setAssignError('Could not load available professionals. Please try again.');
+      setAvailableProfessionals([]);
+    } finally {
+      setLoadingProfessionals(false);
+    }
   };
 
   const closeAssignModal = () => {
@@ -235,6 +247,8 @@ const Bookings = () => {
     setAssignError(null);
     setAssignLoading(false);
     setIsReassign(false);
+    setAvailableProfessionals([]);
+    setLoadingProfessionals(false);
   };
 
   const handleAssignSubmit = async () => {
@@ -249,6 +263,10 @@ const Bookings = () => {
         booking_id: assignBookingId,
         professional_id: parseInt(assignProfessionalId, 10),
       });
+      const successMessage = isReassign
+        ? "Professional reassigned successfully!"
+        : "Professional assigned successfully!";
+      toast.success(successMessage);
       await loadBookings();
       closeAssignModal();
     } catch (err) {
@@ -378,11 +396,10 @@ const Bookings = () => {
             <button
               key={tab.label}
               onClick={() => handleStatusChange(tab.value)}
-              className={`px-4 py-[8px] cursor-pointer rounded-full text-[12px] leading-none transition-colors ${
-                isActive
-                  ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
-                  : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
-              }`}
+              className={`px-4 py-[8px] cursor-pointer rounded-full text-[12px] leading-none transition-colors ${isActive
+                ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
+                : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
+                }`}
             >
               {tab.label}
             </button>
@@ -431,16 +448,14 @@ const Bookings = () => {
                 </span>
                 <span className="text-[13px] font-bold text-[#0A0A0F]">{b.price}</span>
                 <div
-                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
-                    paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
-                  }`}
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
+                    }`}
                 >
                   {b.payment_status}
                 </div>
                 <div
-                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
-                    statusStyles[b.status] || 'bg-slate-100 text-slate-500'
-                  }`}
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${statusStyles[b.status] || 'bg-slate-100 text-slate-500'
+                    }`}
                 >
                   {formatStatusLabel(b.status)}
                 </div>
@@ -455,20 +470,19 @@ const Bookings = () => {
 
                   {isUnassigned ? (
                     <button
-                      onClick={() => openAssignModal(b.id, false)} // Assign
+                      onClick={() => openAssignModal(b.id, false)}
                       className="px-[10px] py-[5px] cursor-pointer bg-[#D61CA8] rounded-[6px] text-[10px] font-bold text-white"
                     >
                       Assign
                     </button>
                   ) : (
                     <button
-                      onClick={canReassign ? () => openAssignModal(b.id, true) : undefined} // Reassign
+                      onClick={canReassign ? () => openAssignModal(b.id, true) : undefined}
                       disabled={!canReassign}
-                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition ${
-                        canReassign
-                          ? 'bg-[#D61CA814] text-[#D61CA8] cursor-pointer'
-                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                      }`}
+                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition ${canReassign
+                        ? 'bg-[#D61CA814] text-[#D61CA8] cursor-pointer'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
                     >
                       Reassign
                     </button>
@@ -555,18 +569,25 @@ const Bookings = () => {
               <label className="block text-[12px] font-semibold text-[#9090A0] uppercase tracking-[0.5px] mb-[6px]">
                 Select Professional
               </label>
-              <select
-                value={assignProfessionalId}
-                onChange={(e) => setAssignProfessionalId(e.target.value)}
-                className="w-full px-[14px] py-[10px] border-[1.5px] border-[#EBEBEF] rounded-[10px] text-[13px] text-[#0A0A0F] outline-none focus:ring-2 focus:ring-[#D61CA8]"
-              >
-                <option value="">Choose a professional…</option>
-                {professionalsList.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.specialty ? `(${p.specialty})` : ''}
-                  </option>
-                ))}
-              </select>
+              {loadingProfessionals ? (
+                <div className="text-[13px] text-[#9090A0] py-[10px]">Loading available professionals…</div>
+              ) : (
+                <select
+                  value={assignProfessionalId}
+                  onChange={(e) => setAssignProfessionalId(e.target.value)}
+                  className="w-full px-[14px] py-[10px] border-[1.5px] border-[#EBEBEF] rounded-[10px] text-[13px] text-[#0A0A0F] outline-none focus:ring-2 focus:ring-[#D61CA8]"
+                >
+                  <option value="">Choose a professional…</option>
+                  {availableProfessionals.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.specialty ? `(${p.specialty})` : ''}
+                    </option>
+                  ))}
+                  {availableProfessionals.length === 0 && (
+                    <option value="" disabled>No professionals available</option>
+                  )}
+                </select>
+              )}
               {assignError && (
                 <div className="mt-[8px] text-[12px] font-medium text-red-500">{assignError}</div>
               )}
@@ -581,7 +602,7 @@ const Bookings = () => {
               </button>
               <button
                 onClick={handleAssignSubmit}
-                disabled={assignLoading}
+                disabled={assignLoading || loadingProfessionals}
                 className="px-[18px] py-[10px] bg-gradient-to-r from-[#D61CA8] to-[#8B2EF5] rounded-[10px] text-[13px] font-bold text-white disabled:opacity-60"
               >
                 {assignLoading
@@ -589,8 +610,8 @@ const Bookings = () => {
                     ? 'Reassigning…'
                     : 'Assigning…'
                   : isReassign
-                  ? 'Reassign'
-                  : 'Assign'}
+                    ? 'Reassign'
+                    : 'Assign'}
               </button>
             </div>
           </div>
