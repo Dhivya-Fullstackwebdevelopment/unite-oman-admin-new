@@ -186,11 +186,56 @@ const Bookings = () => {
       .catch(() => {});
   };
 
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [bookingDetail, setBookingDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+
+  const openBookingDetail = (id) => {
+    setSelectedBookingId(id);
+    setBookingDetail(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    apiGet(`/professionals/bookings/${id}/`)
+      .then((res) => setBookingDetail(res.data))
+      .catch((err) => setDetailError(err.message))
+      .finally(() => setDetailLoading(false));
+  };
+
+  const closeBookingDetail = () => {
+    setSelectedBookingId(null);
+    setBookingDetail(null);
+    setDetailError(null);
+  };
+
+  useEffect(() => {
+    if (selectedBookingId) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [selectedBookingId]);
+
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, totalCount);
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F4F5F8] p-[24px]">
+      <style>{`
+        .modal-scroll::-webkit-scrollbar { width: 5px; }
+        .modal-scroll::-webkit-scrollbar-track { background: transparent; margin: 20px 0; }
+        .modal-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #F0C7E8, #D9B8F2);
+          border-radius: 999px;
+          background-clip: padding-box;
+        }
+        .modal-scroll::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #D61CA8, #8B2EF5);
+        }
+        .modal-scroll { scrollbar-width: thin; scrollbar-color: #E7CDEF transparent; }
+      `}</style>
       {/* Header row */}
       <div className="flex items-center justify-between mb-[18px] flex-wrap gap-3">
         <div>
@@ -333,7 +378,10 @@ const Bookings = () => {
               </div>
               <span className="text-[12px] text-[#6B7280]">{b.time}</span>
               <div className="flex gap-[5px]">
-                <button className="px-[10px] py-[5px] bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]">
+                <button
+                  onClick={() => openBookingDetail(b.id)}
+                  className="px-[10px] py-[5px] bg-[#F8F8FA] border border-[#EBEBEF] rounded-[6px] text-[10px] font-semibold text-[#555]"
+                >
                   View
                 </button>
                 {b.status === 'UNASSIGNED' || !b.professional_name ? (
@@ -399,6 +447,167 @@ const Bookings = () => {
           </div>
         </div>
       </div>
+
+      {/* Booking detail modal */}
+      {selectedBookingId && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+          onClick={closeBookingDetail}
+        >
+          <div
+            className="bg-white rounded-[20px] w-full max-w-[520px] max-h-[88vh] overflow-y-auto shadow-2xl modal-scroll"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {detailLoading && (
+              <div className="py-24 text-center text-[13px] font-medium text-[#9090A0]">Loading details…</div>
+            )}
+
+            {!detailLoading && detailError && (
+              <div className="py-24 text-center text-[13px] font-medium text-red-500 px-[24px]">
+                Couldn't load booking: {detailError}
+              </div>
+            )}
+
+            {!detailLoading && !detailError && bookingDetail && (
+              <>
+                {/* Gradient header */}
+                <div className="relative bg-gradient-to-br from-[#D61CA8] to-[#8B2EF5] rounded-t-[20px] px-[24px] pt-[22px] pb-[26px] overflow-hidden">
+                  <div className="absolute -top-8 -right-8 w-[140px] h-[140px] rounded-full bg-white/10" />
+                  <div className="absolute -bottom-10 -left-6 w-[100px] h-[100px] rounded-full bg-white/10" />
+
+                  {/* <button
+                    onClick={closeBookingDetail}
+                    className="absolute top-[16px] right-[16px] w-[28px] h-[28px] flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white text-[13px] font-bold transition-colors"
+                  >
+                    ✕
+                  </button> */}
+
+                  <div className="relative flex items-center justify-between pr-[36px]">
+                    <div>
+                      <div className="text-white/70 text-[11px] font-semibold uppercase tracking-[0.8px] mb-[4px]">
+                        Booking
+                      </div>
+                      <div className="font-mono text-white text-[18px] font-extrabold">
+                        {bookingDetail.booking_code}
+                      </div>
+                    </div>
+                    <span className="px-[12px] py-[6px] rounded-full text-[11px] font-bold bg-white/90 text-[#0A0A0F]">
+                      {formatStatusLabel(bookingDetail.status)}
+                    </span>
+                  </div>
+
+                  <div className="relative mt-[16px] flex items-baseline justify-between">
+                    <div>
+                      <div className="text-white text-[17px] font-bold leading-tight">
+                        {bookingDetail.service?.type_name}
+                      </div>
+                      <div className="text-white/75 text-[12px] mt-[3px]">
+                        {bookingDetail.service?.duration} · {bookingDetail.date} · {bookingDetail.time}
+                      </div>
+                    </div>
+                    <div className="text-white text-[22px] font-extrabold whitespace-nowrap">
+                      OMR {bookingDetail.pricing?.total_amount}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-[22px] flex flex-col gap-[14px] -mt-[14px]">
+                  {/* Customer & Professional cards */}
+                  <div className="grid grid-cols-2 gap-[10px]">
+                    <div className="bg-[#F8F8FA] rounded-[14px] p-[14px]">
+                      <div className="flex items-center gap-[6px] mb-[8px]">
+                        <span className="text-[14px]">👤</span>
+                        <span className="text-[10px] font-bold text-[#9090A0] uppercase tracking-[0.5px]">Customer</span>
+                      </div>
+                      <div className="text-[13px] font-bold text-[#0A0A0F] truncate">{bookingDetail.user?.name}</div>
+                      <div className="text-[11px] text-[#6B7280] mt-[3px] truncate">{bookingDetail.user?.email}</div>
+                      <div className="text-[11px] text-[#6B7280] mt-[1px]">{bookingDetail.user?.mobile}</div>
+                    </div>
+
+                    <div className="bg-[#F8F8FA] rounded-[14px] p-[14px]">
+                      <div className="flex items-center gap-[6px] mb-[8px]">
+                        <span className="text-[14px]">🛠️</span>
+                        <span className="text-[10px] font-bold text-[#9090A0] uppercase tracking-[0.5px]">Professional</span>
+                      </div>
+                      {bookingDetail.professional ? (
+                        <>
+                          <div className="text-[13px] font-bold text-[#0A0A0F] truncate">
+                            {bookingDetail.professional.name}
+                          </div>
+                          <div className="text-[11px] text-[#D61CA8] font-semibold mt-[3px]">
+                            ★ {bookingDetail.professional.rating} · {bookingDetail.professional.jobs_done} jobs
+                          </div>
+                          <div className="text-[11px] text-[#6B7280] mt-[1px] truncate">
+                            {bookingDetail.professional.specialty}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-[12px] font-bold text-[#EF4444] mt-[2px]">Unassigned</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="border border-[#EBEBEF] rounded-[14px] p-[14px]">
+                    <div className="flex items-center gap-[6px] mb-[8px]">
+                      <span className="text-[14px]">📍</span>
+                      <span className="text-[10px] font-bold text-[#9090A0] uppercase tracking-[0.5px]">
+                        Service Address
+                      </span>
+                    </div>
+                    <div className="text-[13px] font-semibold text-[#0A0A0F]">
+                      {bookingDetail.address?.villa_apartment_no}, {bookingDetail.address?.street_name}
+                    </div>
+                    <div className="text-[12px] text-[#6B7280] mt-[3px]">
+                      {bookingDetail.address?.building_floor} · {bookingDetail.address?.area}
+                    </div>
+                    <div className="text-[12px] text-[#9090A0] mt-[3px] italic">
+                      Landmark: {bookingDetail.address?.nearest_landmark}
+                    </div>
+                  </div>
+
+                  {/* Payment */}
+                  <div className="flex items-center justify-between border border-[#EBEBEF] rounded-[14px] px-[14px] py-[12px]">
+                    <div className="flex items-center gap-[8px]">
+                      <span className="text-[14px]">💳</span>
+                      <span className="text-[12px] font-semibold text-[#0A0A0F]">
+                        {bookingDetail.payment?.method}
+                        {bookingDetail.payment?.card_last4 ? ` •••• ${bookingDetail.payment.card_last4}` : ''}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-[8px] py-[3px] rounded">
+                      Paid
+                    </span>
+                  </div>
+
+                  {/* Pricing breakdown */}
+                  <div className="bg-gradient-to-br from-[#FDF2F8] to-[#F5F0FE] rounded-[14px] p-[16px]">
+                    <div className="text-[10px] font-bold text-[#9090A0] uppercase tracking-[0.5px] mb-[10px]">
+                      Pricing Breakdown
+                    </div>
+                    <div className="flex justify-between text-[12px] text-[#6B7280] mb-[6px]">
+                      <span>Service fee</span>
+                      <span className="font-medium text-[#0A0A0F]">OMR {bookingDetail.pricing?.service_fee}</span>
+                    </div>
+                    <div className="flex justify-between text-[12px] text-[#6B7280] mb-[6px]">
+                      <span>Platform fee</span>
+                      <span className="font-medium text-[#0A0A0F]">OMR {bookingDetail.pricing?.platform_fee}</span>
+                    </div>
+                    <div className="flex justify-between text-[12px] text-[#6B7280] mb-[10px]">
+                      <span>VAT</span>
+                      <span className="font-medium text-[#0A0A0F]">OMR {bookingDetail.pricing?.vat_amount}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[15px] font-extrabold text-[#0A0A0F] pt-[10px] border-t border-[#E7DCF2]">
+                      <span>Total</span>
+                      <span className="text-[#D61CA8]">OMR {bookingDetail.pricing?.total_amount}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

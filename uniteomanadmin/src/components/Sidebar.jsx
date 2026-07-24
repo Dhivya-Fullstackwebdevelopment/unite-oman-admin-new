@@ -3,7 +3,9 @@ import logo from '../assets/uniteoman-logo.png';
 
 const NAV_ITEMS = [
   { key: 'dashboard', icon: 'grid', label: 'Dashboard' },
-  { key: 'bookings', icon: 'calendar', label: 'All Bookings', badge: '147' },
+  // { key: 'bookings', icon: 'calendar', label: 'All Bookings', badge: '147' },
+  { key: 'bookings', icon: 'calendar', label: 'All Bookings' },
+
   { key: 'vendor-verification', icon: 'calendar', label: 'Vendor Verification' },
   { key: 'booking-control', icon: 'calendar', label: 'Booking Control' },
   { key: 'live-map', icon: 'calendar', label: 'Live Map' },
