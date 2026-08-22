@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-
-// const API_BASE_URL = 'http://127.0.0.1:8000/api';
-// const API_BASE_URL = 'http://72.61.229.172:8090/api';
-const API_BASE_URL = 'https://api.uniteoman.com/api';
-
-
-const TOKEN = localStorage.getItem("admin_access_token");
+import { API_ENDPOINTS, apiGet, apiPost } from '../../api/apiconfig';
 
 const STATUS_TABS = [
   { label: 'All', value: '' },
@@ -66,32 +60,6 @@ function getPageNumbers(current, total) {
   return result;
 }
 
-async function apiGet(path) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Request failed (${res.status})`);
-  }
-  return res.json();
-}
-
-async function apiPost(path, body) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `Request failed (${res.status})`);
-  }
-  return res.json();
-}
-
 const Bookings = () => {
   const [activeStatus, setActiveStatus] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -114,41 +82,38 @@ const Bookings = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ── Assignment modal state ────────────────────────────────
+  // Assignment modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignBookingId, setAssignBookingId] = useState(null);
   const [assignProfessionalId, setAssignProfessionalId] = useState('');
-  const [availableProfessionals, setAvailableProfessionals] = useState([]); // <-- list from API
+  const [availableProfessionals, setAvailableProfessionals] = useState([]);
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState(null);
   const [isReassign, setIsReassign] = useState(false);
   const [loadingProfessionals, setLoadingProfessionals] = useState(false);
 
-  // ── Detail modal state ────────────────────────────────────
+  // Detail modal state
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [bookingDetail, setBookingDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
-  // Load filter reference data once
   useEffect(() => {
-    apiGet('/locations/')
+    apiGet(API_ENDPOINTS.LOCATIONS)
       .then((res) => setLocations(res.data || []))
-      .catch(() => { });
-    apiGet('/services/')
+      .catch(() => {});
+    apiGet(API_ENDPOINTS.SERVICES)
       .then((res) => setServices(res.data || []))
-      .catch(() => { });
-    // We no longer fetch global professionals – we'll fetch per booking
+      .catch(() => {});
   }, []);
 
-  // Whenever the main location changes, load its sub-areas
   useEffect(() => {
     if (!locationId) {
       setAreas([]);
       return;
     }
     setAreasLoading(true);
-    apiGet(`/professionals/areas/?location_id=${locationId}`)
+    apiGet(API_ENDPOINTS.AREAS(locationId))
       .then((res) => setAreas(res.data || []))
       .catch(() => setAreas([]))
       .finally(() => setAreasLoading(false));
@@ -166,7 +131,7 @@ const Bookings = () => {
     params.set('page', String(page));
     params.set('page_size', String(pageSize));
 
-    apiGet(`/professionals/admin/bookings/?${params.toString()}`)
+    apiGet(`${API_ENDPOINTS.ADMIN_BOOKINGS}?${params.toString()}`)
       .then((res) => {
         setBookings(res.data || []);
         setTotalCount(res.total_count ?? (res.data || []).length);
@@ -180,7 +145,6 @@ const Bookings = () => {
     loadBookings();
   }, [loadBookings]);
 
-  // Reset to page 1 whenever a filter changes
   const handleStatusChange = (value) => {
     setActiveStatus(value);
     setPage(1);
@@ -205,25 +169,30 @@ const Bookings = () => {
   };
 
   const handleExport = () => {
+    const token = localStorage.getItem("admin_access_token");
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (activeStatus) params.set('status', activeStatus);
     if (area) params.set('area', area);
     if (serviceId) params.set('service_id', serviceId);
     params.set('export', 'csv');
-    const url = `${API_BASE_URL}/professionals/admin/bookings/?${params.toString()}`;
-    fetch(url, { headers: { Authorization: `Bearer ${TOKEN}` } })
-      .then((res) => res.blob())
+
+    const url = `${API_ENDPOINTS.ADMIN_BOOKINGS}?${params.toString()}`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to generate export file.");
+        return res.blob();
+      })
       .then((blob) => {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = 'bookings.csv';
         link.click();
+        URL.revokeObjectURL(link.href);
       })
-      .catch(() => { });
+      .catch((err) => toast.error(err.message || 'Export failed.'));
   };
 
-  // ── Assignment handlers ────────────────────────────────────
   const openAssignModal = async (bookingId, reassign = false) => {
     setAssignBookingId(bookingId);
     setAssignProfessionalId('');
@@ -234,9 +203,9 @@ const Bookings = () => {
     setShowAssignModal(true);
 
     try {
-      const res = await apiGet(`/professionals/bookings/${bookingId}/available-professionals/`);
+      const res = await apiGet(API_ENDPOINTS.AVAILABLE_PROFESSIONALS(bookingId));
       setAvailableProfessionals(res.data || []);
-    } catch (err) {
+    } catch {
       setAssignError('Could not load available professionals. Please try again.');
       setAvailableProfessionals([]);
     } finally {
@@ -263,7 +232,7 @@ const Bookings = () => {
     setAssignLoading(true);
     setAssignError(null);
     try {
-      await apiPost('/professionals/admin/bookings/assign/', {
+      await apiPost(API_ENDPOINTS.ADMIN_ASSIGN_DISPATCH, {
         booking_id: assignBookingId,
         professional_id: parseInt(assignProfessionalId, 10),
       });
@@ -280,13 +249,12 @@ const Bookings = () => {
     }
   };
 
-  // ── Detail modal handlers ────────────────────────────────
   const openBookingDetail = (id) => {
     setSelectedBookingId(id);
     setBookingDetail(null);
     setDetailError(null);
     setDetailLoading(true);
-    apiGet(`/professionals/bookings/${id}/`)
+    apiGet(API_ENDPOINTS.BOOKING_DETAIL(id))
       .then((res) => setBookingDetail(res.data))
       .catch((err) => setDetailError(err.message))
       .finally(() => setDetailLoading(false));
@@ -312,6 +280,7 @@ const Bookings = () => {
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F4F5F8] p-[24px]">
+      <Toaster position="top-right" />
       <style>{`
         .modal-scroll::-webkit-scrollbar { width: 5px; }
         .modal-scroll::-webkit-scrollbar-track { background: transparent; margin: 20px 0; }
@@ -325,6 +294,7 @@ const Bookings = () => {
         }
         .modal-scroll { scrollbar-width: thin; scrollbar-color: #E7CDEF transparent; }
       `}</style>
+
       {/* Header row */}
       <div className="flex items-center justify-between mb-[18px] flex-wrap gap-3">
         <div>
@@ -400,10 +370,11 @@ const Bookings = () => {
             <button
               key={tab.label}
               onClick={() => handleStatusChange(tab.value)}
-              className={`px-4 py-[8px] cursor-pointer rounded-full text-[12px] leading-none transition-colors ${isActive
-                ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
-                : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
-                }`}
+              className={`px-4 py-[8px] cursor-pointer rounded-full text-[12px] leading-none transition-colors ${
+                isActive
+                  ? 'bg-[#D61CA818] border-[1.5px] border-[#D61CA840] font-bold text-[#D61CA8]'
+                  : 'bg-white border-[1.5px] border-[#EBEBEF] font-medium text-[#9090A0] hover:text-[#0A0A0F]'
+              }`}
             >
               {tab.label}
             </button>
@@ -411,7 +382,7 @@ const Bookings = () => {
         })}
       </div>
 
-      {/* Table card */}
+      {/* Bookings Table */}
       <div className="bg-white rounded-[14px] shadow-[0_1px_4px_rgba(0,0,0,0.05)] overflow-hidden">
         <div className={`grid ${gridCols} gap-2 px-[16px] py-[10px] bg-[#F8F8FA] border-b border-[#EBEBEF]`}>
           {['Code', 'Service · Customer', 'Professional', 'Date · Area', 'Price', 'Payment', 'Status', 'Time', 'Actions'].map(
@@ -452,14 +423,16 @@ const Bookings = () => {
                 </span>
                 <span className="text-[13px] font-bold text-[#0A0A0F]">{b.price}</span>
                 <div
-                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
-                    }`}
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
+                    paymentStyles[b.payment_status] || 'bg-slate-100 text-slate-500'
+                  }`}
                 >
                   {b.payment_status}
                 </div>
                 <div
-                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${statusStyles[b.status] || 'bg-slate-100 text-slate-500'
-                    }`}
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-bold inline-block w-fit ${
+                    statusStyles[b.status] || 'bg-slate-100 text-slate-500'
+                  }`}
                 >
                   {formatStatusLabel(b.status)}
                 </div>
@@ -483,10 +456,11 @@ const Bookings = () => {
                     <button
                       onClick={canReassign ? () => openAssignModal(b.id, true) : undefined}
                       disabled={!canReassign}
-                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition ${canReassign
-                        ? 'bg-[#D61CA814] text-[#D61CA8] cursor-pointer'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
-                        }`}
+                      className={`px-[10px] py-[5px] rounded-[6px] text-[10px] font-semibold transition ${
+                        canReassign
+                          ? 'bg-[#D61CA814] text-[#D61CA8] cursor-pointer'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                      }`}
                     >
                       Reassign
                     </button>
@@ -547,7 +521,7 @@ const Bookings = () => {
         </div>
       </div>
 
-      {/* ─── ASSIGN MODAL ────────────────────────────────────── */}
+      {/* Assign Modal */}
       {showAssignModal && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
@@ -622,7 +596,7 @@ const Bookings = () => {
         </div>
       )}
 
-      {/* ─── DETAIL MODAL (unchanged) ────────────────────────── */}
+      {/* Detail Modal */}
       {selectedBookingId && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
@@ -644,7 +618,6 @@ const Bookings = () => {
 
             {!detailLoading && !detailError && bookingDetail && (
               <>
-                {/* Gradient header */}
                 <div className="relative bg-gradient-to-br from-[#D61CA8] to-[#8B2EF5] rounded-t-[20px] px-[24px] pt-[22px] pb-[26px] overflow-hidden">
                   <div className="absolute -top-8 -right-8 w-[140px] h-[140px] rounded-full bg-white/10" />
                   <div className="absolute -bottom-10 -left-6 w-[100px] h-[100px] rounded-full bg-white/10" />
@@ -686,7 +659,6 @@ const Bookings = () => {
                 </div>
 
                 <div className="p-[22px] flex flex-col gap-[14px] -mt-[14px]">
-                  {/* Customer & Professional cards */}
                   <div className="grid grid-cols-2 gap-[10px]">
                     <div className="bg-[#F8F8FA] rounded-[14px] p-[14px]">
                       <div className="flex items-center gap-[6px] mb-[8px]">
@@ -721,7 +693,6 @@ const Bookings = () => {
                     </div>
                   </div>
 
-                  {/* Address */}
                   <div className="border border-[#EBEBEF] rounded-[14px] p-[14px]">
                     <div className="flex items-center gap-[6px] mb-[8px]">
                       <span className="text-[14px]">📍</span>
@@ -740,7 +711,6 @@ const Bookings = () => {
                     </div>
                   </div>
 
-                  {/* Payment */}
                   <div className="flex items-center justify-between border border-[#EBEBEF] rounded-[14px] px-[14px] py-[12px]">
                     <div className="flex items-center gap-[8px]">
                       <span className="text-[14px]">💳</span>
@@ -754,7 +724,6 @@ const Bookings = () => {
                     </span>
                   </div>
 
-                  {/* Pricing breakdown */}
                   <div className="bg-gradient-to-br from-[#FDF2F8] to-[#F5F0FE] rounded-[14px] p-[16px]">
                     <div className="text-[10px] font-bold text-[#9090A0] uppercase tracking-[0.5px] mb-[10px]">
                       Pricing Breakdown

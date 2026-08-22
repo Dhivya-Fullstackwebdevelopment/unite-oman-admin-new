@@ -1,36 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-
-// const API_BASE_URL = 'http://127.0.0.1:8000/api';
-// const API_BASE_URL = 'http://72.61.229.172:8090/api';
-const API_BASE_URL = 'https://api.uniteoman.com/api';
-
-
-const TOKEN = localStorage.getItem("admin_access_token");
-
-async function apiGet(path) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-  });
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
-  return res.json();
-}
-
-async function apiPost(path, body) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.message || `Request failed (${res.status})`);
-  }
-  return data;
-}
+import { API_ENDPOINTS, apiGet, apiPost } from '../../api/apiconfig';
 
 const SERVICE_ICONS = {
   'AC Gas Filling': '❄️',
@@ -71,7 +41,7 @@ const BookingControl = () => {
   const loadDispatchData = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiGet('/professionals/admin/bookings/assign')
+    apiGet(API_ENDPOINTS.ADMIN_ASSIGN_DISPATCH)
       .then((res) => {
         setQueue(res.unassigned_queue || []);
         setSuggestions(res.ai_smart_routing || []);
@@ -92,7 +62,7 @@ const BookingControl = () => {
     }
     setAssigning((prev) => ({ ...prev, [bookingId]: true }));
     try {
-      const res = await apiPost('/professionals/admin/bookings/assign/', {
+      const res = await apiPost(API_ENDPOINTS.ADMIN_ASSIGN_DISPATCH, {
         booking_id: bookingId,
         professional_id: professionalId,
       });
@@ -111,7 +81,7 @@ const BookingControl = () => {
 
   const handleAssignFromQueue = (booking) => {
     const vendorId = selectedVendor[booking.booking_id];
-    assignBooking(vendorId ? Number(vendorId) : null, vendorId ? Number(vendorId) : null, booking.booking_code);
+    assignBooking(booking.booking_id, vendorId ? Number(vendorId) : null, booking.booking_code);
   };
 
   return (
@@ -122,7 +92,9 @@ const BookingControl = () => {
       <div className="flex items-center justify-between mb-[18px]">
         <div>
           <div className="font-extrabold text-[22px] leading-none text-[#0A0A0F]">Booking Control &amp; Dispatch</div>
-          <div className="text-[14px] leading-none text-[#9090A0] mt-[4px]">Admin routes all bookings · Vendors cannot self-assign</div>
+          <div className="text-[14px] leading-none text-[#9090A0] mt-[4px]">
+            Admin routes all bookings · Vendors cannot self-assign
+          </div>
         </div>
         <div className="flex gap-[8px]">
           <div className="px-[16px] py-[8px] bg-[#FFE4E6] rounded-[9px] text-[12px] font-bold text-[#EF4444]">
@@ -139,7 +111,9 @@ const BookingControl = () => {
       )}
 
       {!loading && error && (
-        <div className="py-14 text-center text-base font-medium text-red-500">Couldn't load dispatch data: {error}</div>
+        <div className="py-14 text-center text-base font-medium text-red-500">
+          Couldn't load dispatch data: {error}
+        </div>
       )}
 
       {!loading && !error && (
