@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import logo from '../assets/uniteoman-logo.png';
 import axios from "axios";
-import { API_ENDPOINTS } from "../api/apiConfig";
+import { API_ENDPOINTS } from "../api/apiconfig";
 import toast from 'react-hot-toast';
 
 const Login = ({ onLogin }) => {
